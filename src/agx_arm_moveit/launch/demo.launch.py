@@ -249,6 +249,16 @@ def generate_launch_description():
                 "true: move_group subscribes to feedback_topic; "
                 "false: subscribes to control_topic (mock hardware).",
             ),
+            DeclareLaunchArgument(
+                "feedback_topic",
+                default_value="feedback/joint_states",
+                description="Joint states topic when follow:=true.",
+            ),
+            DeclareLaunchArgument(
+                "control_topic",
+                default_value="control/joint_states",
+                description="Joint states topic when follow:=false.",
+            ),
             DeclareBooleanLaunchArg(
                 "db",
                 default_value=False,
