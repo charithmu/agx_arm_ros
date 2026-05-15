@@ -90,15 +90,35 @@ def resolve_model_path(context, *args, **kwargs):
         LaunchConfiguration('tcp_offset').perform(context)
     )
     pkg_path = get_package_share_path('agx_arm_description')
+    tcp_offset_xyz = f'{tcp_offset[0]} {tcp_offset[1]} {tcp_offset[2]}'
+    tcp_offset_rpy = f'{tcp_offset[3]} {tcp_offset[4]} {tcp_offset[5]}'
 
     if custom_model:
         model_path = _resolve_custom_model_path(pkg_path, custom_model)
+        robot_description = ParameterValue(Command(['xacro ', model_path]), value_type=str)
     else:
-        model_path = _resolve_builtin_model_path(
-            arm_type, effector_type, revo2_type, pkg_path
+        model_path = str(pkg_path / 'agx_arm_urdf' / 'agx_arm_with_tcp.urdf.xacro')
+        robot_description = ParameterValue(
+            Command(
+                [
+                    'xacro ',
+                    model_path,
+                    ' arm_type:=',
+                    arm_type,
+                    ' effector_type:=',
+                    effector_type,
+                    ' revo2_type:=',
+                    revo2_type,
+                    " tcp_offset_xyz:='",
+                    tcp_offset_xyz,
+                    "'",
+                    " tcp_offset_rpy:='",
+                    tcp_offset_rpy,
+                    "'",
+                ]
+            ),
+            value_type=str,
         )
-
-    robot_description = ParameterValue(Command(['xacro ', model_path]), value_type=str)
 
     # When follow=true, use feedback_topic as the state source; otherwise use control_topic.
     state_joint_topic = str(feedback_topic) if follow == 'true' else str(control_topic)
@@ -162,7 +182,9 @@ def resolve_model_path(context, *args, **kwargs):
             *nodes,
         ]
 
-    if any(v != 0.0 for v in tcp_offset):
+    # For custom models, tcp_link is not embedded in the URDF, so always publish
+    # the static transform (even at zero offset so tcp_link always exists in TF).
+    if custom_model:
         flange = _flange_link(arm_type)
         flange_frame = f'{frame_prefix}{flange}' if frame_prefix else flange
         tcp_frame = f'{frame_prefix}tcp_link' if frame_prefix else 'tcp_link'
